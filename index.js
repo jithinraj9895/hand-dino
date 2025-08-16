@@ -103,7 +103,7 @@
      * @enum {number}
      */
     Runner.config = {
-        ACCELERATION: 0.001,
+        ACCELERATION: 0.0001,
         BG_CLOUD_SPEED: 0.2,
         BOTTOM_PAD: 10,
         CLEAR_TIME: 3000,
@@ -115,7 +115,7 @@
         INVERT_FADE_DURATION: 12000,
         INVERT_DISTANCE: 700,
         MAX_BLINK_COUNT: 3,
-        MAX_CLOUDS: 6,
+        MAX_CLOUDS: 20,
         MAX_OBSTACLE_LENGTH: 3,
         MAX_OBSTACLE_DUPLICATION: 2,
         MAX_SPEED: 13,
@@ -2859,8 +2859,8 @@ function onDocumentLoad() {
     hands.setOptions({
         maxNumHands: 1,
         modelComplexity: 1,
-        minDetectionConfidence: 0.9, // was 0.7
-        minTrackingConfidence: 0.9   // was 0.7
+        minDetectionConfidence: 0.7, // was 0.7
+        minTrackingConfidence: 0.7   // was 0.7
     });
 
     hands.onResults(onResults);
@@ -2869,8 +2869,8 @@ function onDocumentLoad() {
         onFrame: async () => {
             await hands.send({ image: videoElement });
         },
-        width: 320, // was 640
-        height: 240 // was 480
+        width: 640, // was 640
+        height: 480 // was 480
     });
     camera.start();
 }
@@ -2890,11 +2890,27 @@ function isFist(landmarks) {
     return closed >= 2; // At least 3 fingers closed
 }
 
+// Pinch detection logic
+function isPinch(landmarks) {
+    // Thumb tip (4), Index tip (8)
+    const thumbTip = landmarks[4];
+    const indexTip = landmarks[8];
+
+    // Euclidean distance between thumb and index
+    const dist = Math.hypot(
+        thumbTip.x - indexTip.x,
+        thumbTip.y - indexTip.y
+    );
+
+    // Adjust threshold depending on camera resolution
+    return dist < 0.05; // true = pinch, false = not pinch
+}
+
 let lastFistTime = 0;
 function onResults(results) {
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
-        if (isFist(landmarks)) {
+        if (isPinch(landmarks)) {
             const now = Date.now();
             if (now - lastFistTime > 300) { // Debounce: 600ms between jumps
                 lastFistTime = now;
